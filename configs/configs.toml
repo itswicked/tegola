@@ -1,25 +1,32 @@
 [webserver]
 port = ":8080"
 
+[cache]
+type = "redis"
+uri = "redis://redis:6379"
+
 [[providers]]
 name = "pokemon"
 type = "postgis"
-host = "localhost"
-database = "pokemon_map"
-user = "postgres"
-password = "password"
+uri = "postgresql://pokemon:pokemon@postgres:5432/pokemon_map?sslmode=disable"
+srid = 4326
 
-[[providers.layers]]
-name = "regions"
-geometry_fieldname = "geom"
-id_fieldname = "id"
-sql = "SELECT ST_AsBinary(geom) AS geom, id, name FROM game_regions"
+  [[providers.layers]]
+  name = "locations"
+  geometry_fieldname = "geom"
+  id_fieldname = "id"
+  sql = """
+    SELECT id, name, type, ST_AsBinary(geom) AS geom
+    FROM test_locations
+    WHERE geom && !BBOX!
+  """
 
 [[maps]]
 name = "pokemon_world"
-attribution = "© Your Pokemon App"
+attribution = "© Pokemon Map"
+center = [-122.4194, 37.7749, 12.0]
 
   [[maps.layers]]
-  provider_layer = "pokemon.regions"
+  provider_layer = "pokemon.locations"
   min_zoom = 0
-  max_zoom = 14
+  max_zoom = 18

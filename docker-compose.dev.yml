@@ -1,0 +1,52 @@
+# docker-compose.dev.yml
+# Your development setup for Pokemon map
+version: '3.8'
+
+services:
+  postgres:
+    image: postgis/postgis:15-3.3
+    container_name: pokemon-postgis
+    environment:
+      POSTGRES_USER: pokemon
+      POSTGRES_PASSWORD: pokemon
+      POSTGRES_DB: pokemon_map
+    ports:
+      - "5433:5432"  # Different port to not conflict with tests
+    volumes:
+      - pokemon_data:/var/lib/postgresql/data
+      - ./init-pokemon.sql:/docker-entrypoint-initdb.d/init.sql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U pokemon -d pokemon_map"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  redis:
+    image: redis:7-alpine
+    container_name: pokemon-redis
+    ports:
+      - "6380:6379"  # Different port
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+
+  tile-server:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: pokemon-tiles
+    ports:
+      - "8080:8080"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    volumes:
+      - ./configs/configs.toml:/config.toml
+    command: serve --config /config.toml
+
+volumes:
+  pokemon_data:

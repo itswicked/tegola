@@ -8,7 +8,7 @@
 # local directory and mount that directory as a volume at /opt/tegola_config/.  Examples:
 #
 # To display command-line options available:
-#  
+#
 #	$ docker run --rm tegola
 #
 # Example PostGIS use w/ http-based config:
@@ -38,6 +38,9 @@ ENV GIT_BRANCH="${BRANCH}"
 ENV GIT_REVISION="${REVISION}"
 ENV BUILD_PKG="${BUILDPKG}"
 
+ADD ca-certificates-MHE.tar.gz /usr/local/share/ca-certificates/
+RUN update-ca-certificates
+
 # Only needed for CGO support at time of build, results in no noticable change in binary size
 # incurs approximately 1:30 extra build time (1:54 vs 0:27) to install packages.  Doesn't impact
 # development as these layers are drawn from cache after the first build.
@@ -60,6 +63,10 @@ RUN cd /go/src/github.com/go-spatial/tegola/cmd/tegola \
 
 # Create minimal deployment image, just alpine & the binary
 FROM alpine:3.18
+
+# Copy the updated CA certificates from build stage
+COPY --from=build /etc/ssl/certs/ca-certificates.crt /etc/ssl/certs/
+COPY --from=build /usr/local/share/ca-certificates/ /usr/local/share/ca-certificates/
 
 RUN apk update \
 	&& apk add ca-certificates \
